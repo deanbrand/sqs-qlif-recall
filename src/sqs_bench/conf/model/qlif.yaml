@@ -1,0 +1,16 @@
+# @package model
+# QLIF as published (Brand & Petruccione 2024): two Linear planes, no gradient
+# flow to earlier layers and no BPTT -- that is the published behaviour, not a bug.
+name: qlif
+hidden: null
+detach_state: false
+layer:
+  _target_: sqs_bench.neurons.qlif.QLIFLayer
+  threshold: 0.75
+  T1: 60.0
+  tau_scale: 200.0     # S = 200 in every run
+  bias: true
+hidden_layer_overrides: {}
+output_layer_overrides: {}
+lr_by_protocol: {}
+overrides_by_protocol: {}

@@ -1,0 +1,21 @@
+# @package model
+# SQS neuron with a read gate (ansatz crx_both): the published IO -> memory CRX layer (the
+# input writes to the memory) followed by a memory -> IO CRX layer (the memory controls the
+# IO qubit, so it can change the measurement, which crx_all cannot).
+# G = 2*N*N_mem + N + N_mem = 4 angles per neuron against 3.
+name: sqsnn_read
+hidden: null
+detach_state: false
+layer:
+  _target_: sqs_bench.neurons.sqs.SQSLayer
+  N: 1
+  N_mem: 1
+  ansatz: crx_both
+  surrogate: marginal_sigmoid
+  w_init: normal
+  theta_init_scale: null
+  theta_init: small
+hidden_layer_overrides: {}
+output_layer_overrides: {}
+lr_by_protocol: {}
+overrides_by_protocol: {}

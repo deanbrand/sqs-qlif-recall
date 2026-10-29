@@ -1,0 +1,41 @@
+[project]
+name = "sqs-qlif-recall"
+version = "0.1.0"
+description = "Delayed-recall study of the stochastic quantum spiking (SQS) neuron with and without a read gate, and the QLIF neuron"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "torch>=2.9",
+    "numpy>=2.0",
+    "hydra-core>=1.3.2",
+    "omegaconf>=2.3",
+    "matplotlib>=3.9",
+]
+
+[project.scripts]
+sqs-bench = "sqs_bench.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8", "scipy>=1.13", "pennylane>=0.45.0"]
+
+[build-system]
+requires = ["uv_build>=0.9.0,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "sqs_bench"
+
+# CUDA 12.8 wheels of torch on Linux and Windows; macOS takes torch from PyPI.
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

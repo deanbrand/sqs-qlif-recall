@@ -1,0 +1,13 @@
+# @package protocol
+# The SQS paper's training settings (lr 5e-4) with cross entropy on the output membrane
+# (QLIF) or Born probability (SQS) as the objective, which every model here can optimise.
+name: sqs_ce
+encoder: identity         # the memory probe is already a spike train
+T: 5                      # used only when the dataset sets no T
+loss: membrane_ce         # CE on the output membrane (Born probability for SQS) summed over the scored steps
+lr: 5.0e-4                # paper: "learning rate is set to 5e-4 for all models"
+batch_size: 128           # ASSUMPTION: not stated in the paper
+epochs: 15                # default when train.epochs is not given
+hidden: null              # null -> dataset.protocol_overrides.sqs_ce.hidden
+bias_override: null       # null -> each model keeps its own bias setting
+detach_state: null        # null -> each model's own setting (full BPTT by default)

@@ -1,0 +1,25 @@
+# @package model
+# Frozen read-gate angle, arm 4 of 4: scale pi.
+#
+# Same circuit as sqsnn_read_uni (ansatz crx_both, uniform init), but the read-gate angles
+# theta_crx2 are drawn from U(0, theta_crx2_scale) and frozen. At scale pi the angles come from
+# the same U(0, pi) that sqsnn_read_uni uses: this is that model with its read gate frozen at
+# initialisation. See sqsnn_angle0.yaml for the design of the four arms.
+name: sqsnn_angle_pi
+hidden: null
+detach_state: false
+layer:
+  _target_: sqs_bench.neurons.sqs.SQSLayer
+  N: 1
+  N_mem: 1
+  ansatz: crx_both
+  surrogate: marginal_sigmoid
+  w_init: normal
+  theta_init_scale: null
+  theta_init: uniform
+  theta_crx2_scale: 3.141592653589793    # pi
+  theta_crx2_trainable: false
+hidden_layer_overrides: {}
+output_layer_overrides: {}
+lr_by_protocol: {}
+overrides_by_protocol: {}

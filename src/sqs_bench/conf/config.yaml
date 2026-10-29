@@ -1,0 +1,30 @@
+defaults:
+  - dataset: memprobe
+  - model: sqsnn
+  - protocol: sqs_ce
+  - train: surrogate
+  - _self_
+
+seed: 0
+device: auto          # auto | cpu | cuda | cuda:1
+out_root: outputs
+skip_if_done: false   # multiruns: leave finished runs alone
+record_hidden: false  # stack hidden-layer spikes/p/mem (memory hungry)
+record_aux: false     # keep every layer aux dict per step
+deviations: []        # filled in by resolve_cfg, copied into metrics.json
+run_suffix: ${train.run_suffix}  # optional extra tag on the run directory name; empty by default
+
+# A variant tags a run family, e.g. sweep60_delay8, and gets its own run directory.
+# config.derive_variant checks that a non-default T / dataset.delay carries a tag.
+variant: ""
+variant_suffix: ${vtag:${variant}}   # "" -> ""; "sweep60_delay8" -> "_sweep60_delay8"
+strict_variant: false                # true -> an untagged non-default run is an error
+
+hydra:
+  run:
+    dir: ${out_root}/${protocol.name}/${dataset.name}/${model.name}${variant_suffix}${run_suffix}/seed${seed}
+  sweep:
+    dir: ${out_root}
+    subdir: ${protocol.name}/${dataset.name}/${model.name}${variant_suffix}${run_suffix}/seed${seed}
+  job:
+    chdir: false

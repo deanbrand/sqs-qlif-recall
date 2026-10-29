@@ -1,0 +1,32 @@
+# @package dataset
+# Synthetic memory probe (sqs_bench/data/memprobe.py): a one-hot cue on one of K
+# lines, `delay` steps of Bernoulli noise, a go pulse on line K, then `n_readout`
+# steps to answer. Sweeping `delay` measures memory span directly.
+#
+#   uv run sqs-bench -m dataset.delay=1,2,4,8,16 variant=sweep60_delay'${dataset.delay}'
+name: memprobe
+generator: memprobe       # built in-process, nothing to download
+K: 4                      # cue lines = classes
+delay: 8                  # noise-only steps between the cue and the go pulse
+n_readout: 3
+# score ONLY the frames after the go pulse: the cue frame carries the label outright, so a
+# decoder that sees it lets a memoryless model classify the cue and the task stops testing memory
+response_window: ${dataset.n_readout}              # steps after the go pulse
+p_noise: 0.1              # Bernoulli rate of the distractor noise on every line
+# noise-only steps BEFORE the cue, so the cue need not be the first input the network sees.
+# sweep60 uses 0; long150, plateau, factorial and angle use 1.
+lead_in: 0
+# Drop test rows that appear verbatim in train and refill from fresh draws.  At delay 1 with
+# lead_in=1, 38% of the test set is a duplicate of a training row and a pure lookup table would
+# score 53.5%.  It cannot explain any model comparison (the memory-blind models see the same
+# duplicates and still sit at 25%), but short-delay absolute accuracies are not clean
+# generalisation without it.  The plateau and angle runs set it true.
+dedupe_test: false
+n_train: 8000
+n_test: 2000
+encoder: identity         # the data is already a [B, T, D] spike train
+T: ${sum:2,${dataset.delay},${dataset.n_readout},${dataset.lead_in}}   # lead_in + cue + delay + go + n_readout
+protocol_overrides:
+  # ASSUMPTION: a fixed 64 hidden neurons; the task is about memory, not width.
+  sqs_ce:
+    hidden: 64

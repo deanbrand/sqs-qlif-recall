@@ -1,0 +1,19 @@
+# @package model
+# The published SQS circuit (crx_all) at uniform init, U(0, pi). With sqsnn, sqsnn_read and
+# sqsnn_read_uni it forms the 2x2 factorial of circuit (with / without read gate) by init.
+name: sqsnn_uni
+hidden: null            # null -> dataset.protocol_overrides (64 for memprobe)
+detach_state: false
+layer:
+  _target_: sqs_bench.neurons.sqs.SQSLayer
+  N: 1
+  N_mem: 1
+  ansatz: crx_all
+  surrogate: marginal_sigmoid
+  w_init: normal
+  theta_init_scale: null   # null -> 0.1 for "small", pi for "uniform"
+  theta_init: uniform
+hidden_layer_overrides: {}
+output_layer_overrides: {}
+lr_by_protocol: {}
+overrides_by_protocol: {}

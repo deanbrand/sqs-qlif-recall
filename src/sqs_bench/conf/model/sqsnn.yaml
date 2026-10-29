@@ -1,0 +1,19 @@
+# @package model
+# SQS neuron (Chen, Rajendran & Simeone, arXiv:2506.21324) with the published circuit (ansatz crx_all):
+# N=1 IO qubit, N_mem=1 memory qubit, small initial angles.
+name: sqsnn
+hidden: null            # null -> dataset.protocol_overrides (64 for memprobe)
+detach_state: false
+layer:
+  _target_: sqs_bench.neurons.sqs.SQSLayer
+  N: 1
+  N_mem: 1
+  ansatz: crx_all
+  surrogate: marginal_sigmoid
+  w_init: normal
+  theta_init_scale: null   # null -> 0.1 for "small", pi for "uniform"
+  theta_init: small     # ASSUMPTION: the paper gives no init; U(0,pi) gives a ~0.5 noise floor and does not train
+hidden_layer_overrides: {}
+output_layer_overrides: {}
+lr_by_protocol: {}
+overrides_by_protocol: {}

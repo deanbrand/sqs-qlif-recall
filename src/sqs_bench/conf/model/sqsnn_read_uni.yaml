@@ -1,0 +1,20 @@
+# @package model
+# SQS neuron with a read gate (ansatz crx_both) at uniform init, U(0, pi). The read gate is a
+# memory -> IO CRX layer after the published IO -> memory layer, so the memory controls the
+# IO qubit. G = 2*N*N_mem + N + N_mem = 4 angles per neuron against 3.
+name: sqsnn_read_uni
+hidden: null
+detach_state: false
+layer:
+  _target_: sqs_bench.neurons.sqs.SQSLayer
+  N: 1
+  N_mem: 1
+  ansatz: crx_both
+  surrogate: marginal_sigmoid
+  w_init: normal
+  theta_init_scale: null
+  theta_init: uniform
+hidden_layer_overrides: {}
+output_layer_overrides: {}
+lr_by_protocol: {}
+overrides_by_protocol: {}
