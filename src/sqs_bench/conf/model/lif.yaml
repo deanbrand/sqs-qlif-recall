@@ -1,0 +1,17 @@
+# @package model
+# Classical LIF neuron (snnTorch Leaky, Eshraghian et al. 2023), the classical reference.
+# Surrogate-gradient BPTT trains both layers.
+name: lif
+hidden: null
+detach_state: false
+layer:
+  _target_: sqs_bench.neurons.lif.LIFLayer
+  beta: 0.95
+  threshold: 1.0
+  slope: 25.0          # fast-sigmoid surrogate
+  reset_mechanism: subtract
+  bias: false
+hidden_layer_overrides: {}
+output_layer_overrides: {}
+lr_by_protocol: {}
+overrides_by_protocol: {}

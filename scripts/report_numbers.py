@@ -1,10 +1,11 @@
-"""Recompute every number the abstract quotes from results/runs.csv and results/test_history.csv.
+"""Recompute the numbers of the abstract, and the results behind it, from results/runs.csv and
+results/test_history.csv.
 
     uv run python scripts/report_numbers.py
     uv run python scripts/report_numbers.py --results my_results
 
-For each claim the script prints the value in the abstract, the value computed here, and ``ok``
-when the two agree to the number of digits the abstract gives. The exit status is 1 if any
+For each claim the script prints the value quoted (in the abstract or in the README), the value
+computed here, and ``ok`` when the two agree to the number of digits quoted. The exit status is 1 if any
 claim does not match.
 
 A claim is checked only when every cell it uses has all the seeds of its tier (sweep60 0-2,
@@ -15,7 +16,7 @@ cell.
 Conventions:
 
 * accuracies are in percent, 100 x ``test_accuracy_mem`` (spike probability for SQS, membrane
-  for QLIF); a *cell* is one (model, tier, delay) and its value is the mean over seeds;
+  for QLIF and LIF); a *cell* is one (model, tier, delay) and its value is the mean over seeds;
 * chance is 25% (four cues) and a uniform guess has loss 3 ln 4 (cross entropy summed over the
   three scored steps);
 * the read-gate gains of the factorial tier ("29-33", "19-21") are the means of two batches of
@@ -43,7 +44,7 @@ CLAIMS = []
 
 #: tier -> (seeds, models, delays) of the runs behind the abstract
 TIERS = {
-    "sweep60": (range(3), ("qlif", "sqsnn"), (1, 2, 4, 8, 16)),
+    "sweep60": (range(3), ("lif", "qlif", "sqsnn"), (1, 2, 4, 8, 16)),
     "long150": (range(5), ("sqsnn", "sqsnn_read"), (1, 2, 4, 8)),
     "plateau": (range(5), ("sqsnn", "sqsnn_read"), (8, 16)),
     "factorial": (range(10), ("sqsnn", "sqsnn_read", "sqsnn_uni", "sqsnn_read_uni"), (1, 2)),
@@ -226,14 +227,14 @@ def _(res):
     return ("69%", f"{m:.2f}%", f"{m:.0f}" == "69", f"sqsnn_read long150 delay 1, {spread}")
 
 
-@claim("... and stays above chance at delay 16, in 5 of 5 seeds")
+@claim("... and stays above chance at delay 16 (30%)")
 def _(res):
     acc = list(res.acc("sqsnn_read", "plateau_delay16").values())
-    gain = statistics.mean(acc) - CHANCE
+    m = statistics.mean(acc)
     above = sum(a > CHANCE for a in acc)
-    return ("+4.8 points, 5 of 5", f"+{gain:.2f} points, {above} of {len(acc)}",
-            f"{gain:.1f}" == "4.8" and above == len(acc) == 5,
-            f"sqsnn_read plateau delay 16 minus chance; seeds {span(acc, '.1f')}%")
+    return ("30%", f"{m:.2f}%", f"{m:.0f}" == "30" and above == len(acc),
+            f"sqsnn_read plateau delay 16, {m - CHANCE:+.2f} points over chance; above chance in "
+            f"{above} of {len(acc)} seeds ({span(acc, '.1f')}%)")
 
 
 def read_gate_gain(res, delay: int) -> tuple[list[float], list[float], list[float]]:
@@ -313,7 +314,7 @@ def _(res):
             "mean per-seed sqsnn_angle_pi minus sqsnn_angle_pi2 at delays 1 and 2; " + ", ".join(parts))
 
 
-@claim("QLIF stays within 5 points of SQS with the read gate at every delay")
+@claim("QLIF is close to SQS with the read gate: within 5 points at every delay")
 def _(res):
     pairs = [(d, f"long150_delay{d}") for d in (1, 2, 4, 8)] + [(8, "plateau_delay8"), (16, "plateau_delay16")]
     diffs = [(d, v, res.mean("qlif", f"sweep60_delay{d}") - res.mean("sqsnn_read", v)) for d, v in pairs]
@@ -327,6 +328,24 @@ def _(res):
     d1, d8 = res.mean("qlif", "sweep60_delay1"), res.mean("qlif", "sweep60_delay8")
     return ("72% and 35%", f"{d1:.2f}% and {d8:.2f}%", (f"{d1:.0f}", f"{d8:.0f}") == ("72", "35"),
             "qlif sweep60 cell means")
+
+
+@claim("LIF: 96% at delay 1, 75% at delay 8")
+def _(res):
+    d1, d8 = res.mean("lif", "sweep60_delay1"), res.mean("lif", "sweep60_delay8")
+    return ("96% and 75%", f"{d1:.2f}% and {d8:.2f}%", (f"{d1:.0f}", f"{d8:.0f}") == ("96", "75"),
+            "lif sweep60 cell means")
+
+
+@claim("LIF, QLIF and SQS networks have the same width, 64 hidden neurons")
+def _(res):
+    params = {m: {int(number(r, "n_params_trainable")) for d in (1, 2, 4, 8, 16)
+                  for r in res.rows(m, f"sweep60_delay{d}")} for m in ("lif", "qlif", "sqsnn")}
+    # 5 inputs -> 64 hidden -> 4 outputs: LIF 9 x 64 weights, QLIF two planes with bias, SQS 780
+    expected = {"lif": {(5 + 4) * 64}, "qlif": {2 * ((5 + 1) * 64 + (64 + 1) * 4)}, "sqsnn": {780}}
+    return ("64", "64" if params == expected else "other", params == expected,
+            "trainable parameters per sweep60 run: "
+            + ", ".join(f"{m} {'/'.join(map(str, sorted(v)))}" for m, v in params.items()))
 
 
 LEVEL_DETAIL = (f"final value = mean test accuracy of the last {LEVEL_WINDOW} epochs; levelled off "
@@ -358,7 +377,7 @@ def _(res):
             "sqsnn_read delay 8, long150 and plateau")
 
 
-@claim("Figure 2(b) caption: seeds and epochs per series")
+@claim("Figure 1(e): seeds and epochs per series")
 def _(res):
     def series(models, tier, delays):
         """Seeds per cell and epoch caps of a series, each as "a" or "a/b" if they vary."""
@@ -368,10 +387,11 @@ def _(res):
         return "/".join(map(str, seeds)), "/".join(map(str, caps))
     sqs = ("sqsnn", "sqsnn_read")
     (s1, e1), (s2, e2) = series(sqs, "long150", (1, 2, 4, 8)), series(sqs, "plateau", (8, 16))
-    s3, e3 = series(["qlif"], "sweep60", (1, 2, 4, 8, 16))
-    quoted = "SQS 5 seeds, 150 or <=300 epochs; QLIF 3 seeds, 60 epochs"
-    got = f"SQS {s1 if s1 == s2 else s1 + ' and ' + s2} seeds, {e1} or <={e2} epochs; QLIF {s3} seeds, {e3} epochs"
-    return (quoted, got, got == quoted, "SQS: long150 (filled) and plateau (open); QLIF: sweep60")
+    s3, e3 = series(["qlif", "lif"], "sweep60", (1, 2, 4, 8, 16))
+    quoted = "SQS 5 seeds, 150 or <=300 epochs; QLIF and LIF 3 seeds, 60 epochs"
+    got = (f"SQS {s1 if s1 == s2 else s1 + ' and ' + s2} seeds, {e1} or <={e2} epochs; "
+           f"QLIF and LIF {s3} seeds, {e3} epochs")
+    return (quoted, got, got == quoted, "SQS: long150 (filled) and plateau (open); QLIF and LIF: sweep60")
 
 
 @claim("The open points and the angle test use test sets with no train overlap")
@@ -402,7 +422,7 @@ def main() -> int:
             continue
         status = "ok" if match else "DIFF"
         counts[status] += 1
-        print(f"{status:>4}  {text}\n      abstract: {quoted:<22} computed: {computed}\n      ({detail})\n")
+        print(f"{status:>4}  {text}\n      quoted: {quoted:<24} computed: {computed}\n      ({detail})\n")
     print(f"{counts['ok']} of {len(CLAIMS)} claims match, {counts['DIFF']} differ, "
           f"{counts['missing']} skipped.")
     print("Memory state vs spike probabilities: run scripts/check_memory_blindness.py")

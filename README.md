@@ -4,25 +4,30 @@ Code, results and scripts behind the abstract *How to Recall Using Stochastic Qu
 Networks* (D. Brand, J. Chen, B. Rajendran, O. Simeone and F. Petruccione), an abstract for the
 International Neuromorphic Computing Conference (INCC 2027).
 
-The study puts two quantum spiking neurons on a controlled recall task. The stochastic quantum
-spiking (SQS) neuron of Chen, Rajendran and Simeone (arXiv:2506.21324) measures its input-output
-qubit at every step and keeps a memory qubit that is never measured. The quantum leaky
-integrate-and-fire (QLIF) neuron of Brand and Petruccione (npj Quantum Inf. 10, 125 (2024); code at
-https://github.com/deanbrand/QSNN) uses one qubit as both its memory and its measured output. In the
-task, one of four cues appears for one step, then come *d* steps of random noise spikes and a go
-signal, and the network must name the cue during a three-step response window; chance is 25%. The
-published SQS circuit stays at chance at every delay from 1 to 16. Its two-qubit gates write to the
-memory qubit, but none reads from it, so the memory state cannot change the spike probabilities.
-Adding one *read gate* per neuron, a controlled rotation with the memory qubit as control and the
-input-output qubit as target, lets the network recall the cue: 69% at delay 1 and still above chance
-at delay 16. QLIF needs no read gate, because the qubit it measures is its memory, and it stays
-within 5 points of SQS with the read gate at every delay.
+The study puts two quantum spiking neurons on a controlled recall task, with a network of classical
+leaky integrate-and-fire (LIF) neurons as a reference. The stochastic quantum spiking (SQS) neuron
+of Chen, Rajendran and Simeone (arXiv:2506.21324) measures its input-output qubit at every step and
+keeps a memory qubit that is never measured. The quantum leaky integrate-and-fire (QLIF) neuron of
+Brand and Petruccione (npj Quantum Inf. 10, 125 (2024); code at https://github.com/deanbrand/QSNN)
+uses one qubit per neuron, whose excited-state population is its membrane potential. In the task,
+one of four cues appears for one step, then come *d* steps of random noise spikes and a go signal,
+and the network must name the cue during a three-step response window; chance is 25%. The published
+SQS circuit stays at chance at every delay from 1 to 16. Its two-qubit gates write to the memory
+qubit, but none reads from it, so the memory state cannot change the spike probabilities. Adding one
+*read gate* per neuron, a controlled rotation with the memory qubit as control and the input-output
+qubit as target, lets the network recall the cue: 69% at delay 1 and still above chance at delay 16.
+QLIF needs no read gate: like a classical LIF neuron, it carries its membrane potential from one
+step to the next, and that number sets both the next state of its qubit and its spikes. It stays
+within 5 points of SQS with the read gate at every delay. The classical LIF network, trained on the
+same task with the same loss, recalls the cue best: 96% at delay 1 and 75% at delay 8. Part of its
+lead comes from training: its surrogate gradient reaches both layers, while in the published QLIF
+only the output layer learns.
 
-Every network has 5 input lines (four cues and the go line), 64 hidden neurons and 4 output
-neurons. Training uses Adam (learning rate 5e-4, batch 128) with surrogate gradients on a
-cross-entropy loss over each output neuron's spike probability (SQS) or membrane (QLIF), summed over
-the three response steps; accuracy reads the same quantity. Each seed draws 8000 training and 2000
-test sequences.
+Every network has 5 input lines (four cues and the go line), 64 hidden neurons and 4 output neurons.
+Training uses Adam (learning rate 5e-4, batch 128) with surrogate gradients on a cross-entropy loss
+over each output neuron's spike probability (SQS) or membrane (QLIF, LIF), summed over the three
+response steps; accuracy reads the same quantity. Each seed draws 8000 training and 2000 test
+sequences.
 
 ## Setup
 
@@ -32,10 +37,10 @@ Needs Python 3.12 and [uv](https://docs.astral.sh/uv/).
 uv sync
 ```
 
-This installs torch, numpy, hydra-core, omegaconf and matplotlib, plus pytest, scipy and PennyLane
-for the tests. On Linux and Windows torch 2.11.0 comes from the PyTorch CUDA 12.8 index, the
-version behind the recorded runs; with its CUDA libraries the environment takes about 4.6 GB, even
-on a machine without a GPU. On macOS torch comes from PyPI, at a newer version (2.15.0 in
+This installs torch, numpy, hydra-core, omegaconf, matplotlib and snnTorch, plus pytest, scipy and
+PennyLane for the tests. On Linux and Windows torch 2.11.0 comes from the PyTorch CUDA 12.8 index,
+the version behind the recorded runs; with its CUDA libraries the environment takes about 4.6 GB,
+even on a machine without a GPU. On macOS torch comes from PyPI, at a newer version (2.15.0 in
 `uv.lock`), whose only macOS wheel is for Apple Silicon (arm64) on macOS 14 or later, so `uv sync`
 fails on Intel Macs and on older macOS versions.
 
@@ -48,8 +53,9 @@ when torch finds it, and `run_experiments.py` moves its CUDA sets to the CPU whe
 uv run pytest
 ```
 
-309 tests, about a minute on the CPU, no network access. They compare the QLIF code with the
-published file (`tests/reference/qsnn_alpha.py`), check the SQS statevector simulator against
+313 tests, about a minute on the CPU, no network access. They compare the QLIF code with the
+published file (`tests/reference/qsnn_alpha.py`), check the LIF membrane update against a hand
+calculation, check the SQS statevector simulator against
 PennyLane and against finite differences, train short runs of every model, and run the scripts
 below on the shipped tables and on parts of them.
 
@@ -59,17 +65,17 @@ below on the shipped tables and on parts of them.
 uv run python scripts/check_memory_blindness.py
 ```
 
-For one input-output and one memory qubit, the script builds 512 random neurons, puts each
-neuron's memory qubit in 64 random states, applies one time step to the same input and prints
-the largest change this makes to any spike probability. The published circuit (`crx_all`) gives
-about 1e-15, floating-point error; the circuit with the read gate (`crx_both`) gives 0.12 to
-0.97; the read gate with its angles fixed at 0 is back at 1e-15. This is the "to machine
-precision" claim of the abstract. The script exits with status 1 if any of the three circuits
-misbehaves.
+For one input-output and one memory qubit, the script builds 512 random neurons, puts each neuron's
+memory qubit in 64 random states, applies one time step to the same input and prints the largest
+change this makes to any spike probability. The published circuit (`crx_all`) gives about 1e-15,
+floating-point error; the circuit with the read gate (`crx_both`) gives 0.12 to 0.97; the read gate
+with its angles fixed at 0 is back at 1e-15. This is what lies behind the abstract's statement that
+no gate of the published circuit reads from the memory. The script exits with status 1 if any of the
+three circuits misbehaves.
 
 ## Reproduce the numbers and the figure
 
-`results/` holds the 234 runs behind the abstract:
+`results/` holds the 249 runs behind the abstract:
 
 - `results/runs.csv`: one row per run (model, variant, delay, seed, `lead_in`, `dedupe_test`,
   sequence length `T`, epoch cap, epoch reached, why training stopped, final test accuracy and
@@ -81,16 +87,16 @@ uv run python scripts/report_numbers.py
 uv run python scripts/plot_recall.py
 ```
 
-`report_numbers.py` recomputes the 18 numeric claims of the abstract from the two tables and
-prints, for each, the quoted value, the computed value and `ok`. It exits with status 1 if any
-claim differs. Two claims need a definition the abstract leaves out. The read-gate gains of 29-33
-points (delay 1) and 19-21 points (delay 2) are the means of two batches of five seeds, 0-4 and
-5-9, each averaged over both initial angle choices; over all ten seeds the gains are 30.8 and
-20.0 points. For when accuracy levels off, a run's final value is the mean test accuracy of its
-last 10 epochs, and the run has levelled off at the first epoch whose mean over the 10 epochs up
-to it is within 2 points of that.
+`report_numbers.py` recomputes 20 claims from the two tables: the numbers in the abstract and the
+results behind its statements. For each it prints the quoted value, the computed value and `ok`. It
+exits with status 1 if any claim differs. Two claims need a definition. The read-gate gains of 29-33
+points (delay 1) and 19-21 points (delay 2) are the means of two batches of five seeds, 0-4 and 5-9,
+each averaged over both initial angle choices; over all ten seeds the gains are 30.8 and 20.0
+points. For when accuracy levels off, a run's final value is the mean test accuracy of its last 10
+epochs, and the run has levelled off at the first epoch whose mean over the 10 epochs up to it is
+within 2 points of that.
 
-`plot_recall.py` draws Figure 2(b), recall accuracy against delay, into
+`plot_recall.py` draws Figure 1(e), recall accuracy against delay, into
 `figures/recall_vs_delay.png` and `.pdf`. It uses Times New Roman when installed and falls back
 to another serif font. `figures/` is not tracked by git.
 
@@ -107,7 +113,7 @@ uv run sqs-bench model=qlif dataset.delay=1 train.epochs=10 variant=demo_delay1 
 
 This takes about ten seconds and reaches roughly 80% test accuracy. The accuracy the study
 reports is `acc_mem` in the log and `test_accuracy_mem` in the final `done` line; it reads each
-output neuron's spike probability (SQS) or membrane (QLIF). `test_accuracy` in the same line
+output neuron's spike probability (SQS) or membrane (QLIF, LIF). `test_accuracy` in the same line
 counts output spikes instead, and is lower.
 
 The run lands in `outputs/sqs_ce/memprobe/qlif_demo_delay1/seed0/` with `config.yaml` (every setting
@@ -144,7 +150,7 @@ holds the overrides as passed, so there the tag reads `variant=<set>_delay${data
 
 | Set (`--tier`) | What it tests | Models | Delays | Seeds | Epochs | Runs |
 |---|---|---|---|---|---|---|
-| `sweep60` | QLIF against the published SQS circuit over delay; the QLIF points of the figure | `qlif`, `sqsnn` | 1, 2, 4, 8, 16 | 0-2 | 60 | 30 |
+| `sweep60` | QLIF and classical LIF against the published SQS circuit over delay; the QLIF and LIF points of the figure | `lif`, `qlif`, `sqsnn` | 1, 2, 4, 8, 16 | 0-2 | 60 | 45 |
 | `long150` | The read gate over delay; the filled SQS points of the figure | `sqsnn`, `sqsnn_read` | 1, 2, 4, 8 | 0-4 | 150 | 40 |
 | `plateau` | Longer training with a test set that has no sequence in common with the training set; the open points | `sqsnn`, `sqsnn_read` | 8, 16 | 0-4 | up to 300; stops when none of the last 60 epochs beats the best train loss before them by more than 1e-4 | 20 |
 | `factorial` | Read gate on or off, crossed with small or uniform initial angles; the 29-33 and 19-21 point gains (means over seeds 0-4 and over seeds 5-9) | `sqsnn`, `sqsnn_read`, `sqsnn_uni`, `sqsnn_read_uni` | 1, 2 | 0-9 | 60 | 80 |
@@ -152,8 +158,8 @@ holds the overrides as passed, so there the tag reads `variant=<set>_delay${data
 
 All sets share `protocol=sqs_ce dataset=memprobe`. `sweep60` puts the cue on the first step
 (`dataset.lead_in=0`) and runs on the CPU (`device=cpu`); the other four put one noise step
-before the cue (`dataset.lead_in=1`) and run on CUDA. The QLIF comparison therefore crosses
-sets: QLIF comes from `sweep60`, SQS with the read gate from `long150` and `plateau`.
+before the cue (`dataset.lead_in=1`) and run on CUDA. The comparison therefore crosses sets:
+QLIF and LIF come from `sweep60`, SQS with the read gate from `long150` and `plateau`.
 
 ### Compute
 
@@ -162,7 +168,7 @@ one after another:
 
 | Set | Device | Per run | Total |
 |---|---|---|---|
-| `sweep60` | CPU | `qlif` 1.5-5 min; `sqsnn` 6.5-23 min, growing with the delay | 3.7 h |
+| `sweep60` | CPU | `lif` 0.7-2 min; `qlif` 1.5-5 min; `sqsnn` 6.5-23 min, growing with the delay | 4.0 h |
 | `long150` | GPU | 11-26 min | 10.8 h |
 | `plateau` | GPU | `sqsnn` 13-36 min; `sqsnn_read` 32-80 min | 12.9 h |
 | `factorial` | GPU | 4-6 min | 6.5 h |
@@ -184,8 +190,10 @@ drift apart through rounding, because every spike is a random draw from a probab
 accuracies differ by about the seed-to-seed spread. For example, one `sqsnn_angle_pi2` run that
 recorded 46.5% ended at 45.2% on a different GPU, against a spread of 4 points over seeds. A `qlif`
 run from `sweep60` reproduced its recorded accuracies exactly on a different CPU; only the loss
-differed, by 1e-7. So `report_numbers.py` on a re-run from other hardware may print `DIFF` for some
-claims, by amounts within the seed-to-seed spread.
+differed, by 1e-7. The 15 `lif` runs of `sweep60`, re-run on that CPU, ended within 0.9 points of
+their recorded accuracies, and the means over seeds within 0.3 points. So `report_numbers.py` on a
+re-run from other hardware may print `DIFF` for some claims, by amounts within the seed-to-seed
+spread.
 
 ### Collect and report
 
@@ -221,6 +229,7 @@ paper. Small initial angles are N(0, 0.1); uniform ones are U(0, pi).
 | `sqsnn_read_uni` | with the read gate | uniform | 848 |
 | `sqsnn_angle0`, `sqsnn_angle_pi4`, `sqsnn_angle_pi2`, `sqsnn_angle_pi` | with the read gate; its angles are drawn from U(0, a) with a = 0, pi/4, pi/2 or pi and then frozen, every other parameter starts from the same values as `sqsnn_read_uni` at the same seed | uniform | 780 trainable, 848 stored |
 | `qlif` | QLIF as published: one qubit per neuron, input and leak rotations, threshold 0.75, T1 = 60, S = 200; the gradient does not pass through emitted spikes or through time, so only the output layer learns | | 1288 |
+| `lif` | classical LIF neuron, snnTorch `Leaky`: leak 0.95 per step, threshold 1, reset by subtracting the threshold, no bias; the fast-sigmoid surrogate gradient (slope 25) passes through spikes and through time, so both layers learn | | 576 |
 
 At a = 0 the read gate is the identity and the circuit is the published one; this is where the
 abstract's 24.8-24.9% comes from.
@@ -235,6 +244,7 @@ src/sqs_bench/
   data/memprobe.py       the recall task: cue, noise, go signal, response window
   neurons/sqs.py         SQS neuron: batched statevector simulation, both circuits, surrogate
   neurons/qlif.py        QLIF neuron, with the published Alpha / AlphaSurrogate code verbatim
+  neurons/lif.py         classical LIF neuron (snnTorch Leaky), the reference
   models/                feedforward spiking network built from one neuron type
   train/                 data loading, the training loop, early stopping
   losses.py              the cross-entropy objective over the response window
@@ -246,7 +256,7 @@ scripts/
   report_numbers.py      results/ -> every number in the abstract
   plot_recall.py         results/runs.csv -> figures/recall_vs_delay.{png,pdf}
   check_memory_blindness.py
-results/                 the 234 runs behind the abstract
+results/                 the 249 runs behind the abstract
 tests/                   pytest suite; tests/reference/qsnn_alpha.py is the published QLIF file
 ```
 
@@ -258,10 +268,16 @@ The abstract:
 > Stochastic Quantum Spiking Networks", International Neuromorphic Computing Conference
 > (INCC 2027).
 
-The two neurons:
+The two quantum neurons:
 
 > J. Chen, B. Rajendran and O. Simeone, "Stochastic Quantum Spiking Neural Networks with Quantum
 > Memory and Local Learning", IEEE J. Sel. Areas Commun. (2026), arXiv:2506.21324.
 
 > D. Brand and F. Petruccione, "A quantum leaky integrate-and-fire spiking neuron and network",
 > npj Quantum Inf. 10, 125 (2024).
+
+The classical reference, snnTorch:
+
+> J. K. Eshraghian, M. Ward, E. O. Neftci, X. Wang, G. Lenz, G. Dwivedi, M. Bennamoun, D. S. Jeong
+> and W. D. Lu, "Training Spiking Neural Networks Using Lessons From Deep Learning", Proc. IEEE
+> 111(9), 1016-1054 (2023).

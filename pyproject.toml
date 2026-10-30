@@ -1,7 +1,7 @@
 [project]
 name = "sqs-qlif-recall"
 version = "0.1.0"
-description = "Delayed-recall study of the stochastic quantum spiking (SQS) neuron with and without a read gate, and the QLIF neuron"
+description = "Delayed-recall study of the stochastic quantum spiking (SQS) neuron with and without a read gate, the QLIF neuron and the classical LIF neuron"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
@@ -10,6 +10,7 @@ dependencies = [
     "hydra-core>=1.3.2",
     "omegaconf>=2.3",
     "matplotlib>=3.9",
+    "snntorch>=1.0",
 ]
 
 [project.scripts]

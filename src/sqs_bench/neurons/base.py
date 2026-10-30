@@ -1,6 +1,6 @@
 """Shared interface for all spiking layers in sqs_bench.
 
-Every neuron model (SQS, QLIF) is wrapped as a *layer*: a bank of ``out_features``
+Every neuron model (SQS, QLIF, LIF) is wrapped as a *layer*: a bank of ``out_features``
 neurons fed by ``in_features`` presynaptic spike trains, stepped one time step at
 a time. "The SQS paper" is Chen, Rajendran and Simeone, arXiv:2506.21324.
 
@@ -8,16 +8,16 @@ Tensor conventions (fixed; do not change without updating every implementer)
 ---------------------------------------------------------------------------
 * ``x_t``      : ``[B, N_in, in_features]`` float -- presynaptic signals at time t.
                  ``N_in`` is the number of spike *channels* per presynaptic neuron
-                 (the SQS paper's ``N``; 1 for QLIF).
+                 (the SQS paper's ``N``; 1 for QLIF and LIF).
 * ``spikes``   : ``[B, out_features, N_out]`` float -- the layer's output signals.
                  Must be differentiable through whatever surrogate the neuron
                  defines (the value is hard 0/1).
 * ``state``    : opaque per-layer recurrent state (membrane ``[B, out]`` for
-                 QLIF, statevector ``[B, out, 2**(N+N_mem)]`` for SQS).
+                 QLIF and LIF, statevector ``[B, out, 2**(N+N_mem)]`` for SQS).
                  Created by ``init_state`` and threaded through ``forward``.
 * ``aux``      : dict of extra tensors for losses / metrics.
                  Conventional keys (present when meaningful):
-                   ``"mem"``     membrane potential ``[B, out]``  (QLIF)
+                   ``"mem"``     membrane potential ``[B, out]``  (QLIF, LIF)
                    ``"p"``       spike probability  ``[B, out, N_out]`` (SQS Born
                                  marginal P(s=1); for QLIF the multi-shot
                                  excitation probability alpha = mem)

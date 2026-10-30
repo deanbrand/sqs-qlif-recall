@@ -1,6 +1,6 @@
-"""Figure 2(b): recall accuracy against delay for SQS with and without the read gate, and QLIF.
+"""Figure 1(e): recall accuracy against delay for SQS with and without the read gate, QLIF and LIF.
 
-Reads results/runs.csv (``test_accuracy_mem``: spike probability for SQS, membrane for QLIF)
+Reads results/runs.csv (``test_accuracy_mem``: spike probability for SQS, membrane for QLIF and LIF)
 and writes figures/recall_vs_delay.png and .pdf. Points are the mean over seeds with one
 standard deviation; dots are single seeds.
 
@@ -8,7 +8,8 @@ standard deviation; dots are single seeds.
   markers the tier trained until the loss levelled off (``plateau``, at most 300 epochs, test
   set with no train overlap), 5 seeds each. One line runs through both tiers per model; at
   delay 8 the two tiers are drawn slightly apart.
-* QLIF (``qlif``): the 60-epoch tier (``sweep60``), 3 seeds.
+* QLIF (``qlif``) and the classical LIF reference (``lif``, drawn in neutral grey): the 60-epoch
+  tier (``sweep60``), 3 seeds.
 
     uv run python scripts/plot_recall.py
     uv run python scripts/plot_recall.py --runs my_results/runs.csv --out my_figures
@@ -28,18 +29,21 @@ from matplotlib import font_manager  # noqa: E402
 
 BLUE, ORANGE, AQUA = "#2a78d6", "#eb6834", "#1baf7a"
 INK, MUTED, GRID = "#0b0b0b", "#52514e", "#e4e3df"
+REF = "#3d3c39"  # the classical reference: a neutral, as no fourth hue stays apart from all three
 CM = 1 / 2.54
 SERIF = ("Times New Roman", "Times", "Nimbus Roman", "Liberation Serif", "STIXGeneral", "DejaVu Serif")
 
 # (model, colour, marker, [(variant prefix, delays, filled?, x factor at delay 8)], seeds in the caption)
 SERIES = [
+    ("lif", REF, "D", [("sweep60_delay", [1, 2, 4, 8, 16], True, 1.0)], 3),
     ("qlif", AQUA, "^", [("sweep60_delay", [1, 2, 4, 8, 16], True, 1.0)], 3),
     ("sqsnn", BLUE, "s", [("long150_delay", [1, 2, 4, 8], True, 0.93), ("plateau_delay", [8, 16], False, 1.07)], 5),
     ("sqsnn_read", ORANGE, "o", [("long150_delay", [1, 2, 4, 8], True, 0.93), ("plateau_delay", [8, 16], False, 1.07)], 5),
 ]
 # direct labels instead of a legend: (x, y, model, text), each placed where its line is nearest
 LABELS = [
-    (4.8, 56.5, "sqsnn_read", "SQS with read gate"),
+    (5.6, 92.0, "lif", "Classical LIF"),
+    (4.4, 56.0, "sqsnn_read", "SQS with read gate"),
     (3.6, 34.0, "qlif", "QLIF"),
     (1.0, 19.0, "sqsnn", "SQS w/o read gate"),
 ]
@@ -114,16 +118,16 @@ def main() -> None:
     ax.set_xticks([1, 2, 4, 8, 16], labels=["1", "2", "4", "8", "16"])
     ax.minorticks_off()
     ax.set_xlim(0.8, 19)
-    ax.set_ylim(15, 82)
-    ax.set_yticks([20, 40, 60, 80])
-    ax.set_xlabel("Delay between cue and response (steps)")
+    ax.set_ylim(15, 100)
+    ax.set_yticks([20, 40, 60, 80, 100])
+    ax.set_xlabel("Delay $d$ (noise steps after the cue)")
     ax.set_ylabel("Recall accuracy (%)")
     ax.grid(axis="y", color=GRID, lw=0.5, zorder=0)
     ax.set_axisbelow(True)
     for side in ("top", "right"):
         ax.spines[side].set_visible(False)
     fig.tight_layout(pad=0.15, rect=(0, 0, 1, 0.95))
-    fig.text(0.004, 0.998, "(b)", ha="left", va="top", fontsize=8, fontweight="bold", color=INK)
+    fig.text(0.004, 0.998, "(e)", ha="left", va="top", fontsize=8, fontweight="bold", color=INK)
     args.out.mkdir(parents=True, exist_ok=True)
     for ext in ("png", "pdf"):
         fig.savefig(args.out / f"recall_vs_delay.{ext}", dpi=600, facecolor="white")

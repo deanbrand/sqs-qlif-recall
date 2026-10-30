@@ -32,7 +32,7 @@ COMMON = ["protocol=sqs_ce", "dataset=memprobe", "skip_if_done=true"]
 TIERS = {
     # 60 epochs, the cue on the first step, on the CPU
     "sweep60": {
-        "models": ["qlif", "sqsnn"],
+        "models": ["lif", "qlif", "sqsnn"],
         "delays": [1, 2, 4, 8, 16],
         "seeds": [0, 1, 2],
         "device": "cpu",

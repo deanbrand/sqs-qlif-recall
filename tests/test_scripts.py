@@ -37,7 +37,7 @@ def write_subset(folder: Path, keep) -> None:
 def test_report_numbers_on_the_shipped_tables():
     done = run_script("report_numbers.py")
     assert done.returncode == 0, done.stdout + done.stderr
-    assert "18 of 18 claims match, 0 differ, 0 skipped." in done.stdout
+    assert "20 of 20 claims match, 0 differ, 0 skipped." in done.stdout
 
 
 @pytest.mark.parametrize(
@@ -82,7 +82,7 @@ def test_report_numbers_skips_claims_with_empty_cells(tmp_path):
     assert "Traceback" not in done.stderr, done.stderr
     assert done.returncode == 0, done.stdout
     assert "test_loss is ''" in done.stdout and "non-finite test_acc_mem" in done.stdout
-    assert "16 of 18 claims match, 0 differ, 2 skipped." in done.stdout
+    assert "18 of 20 claims match, 0 differ, 2 skipped." in done.stdout
 
 
 def fake_run(outputs: Path, model: str, variant: str, seed: int, suffix: str = "", **metrics):
@@ -141,5 +141,5 @@ def test_run_experiments_dry_run_counts_every_run():
     assert done.returncode == 0, done.stderr
     counts = [int(line.rsplit("= ", 1)[1].split()[0]) for line in done.stdout.splitlines()
               if line.startswith("# ") and line.endswith(" runs")]
-    assert counts == [30, 40, 20, 80, 64]
+    assert counts == [45, 40, 20, 80, 64]
     assert done.stdout.count("OMP_NUM_THREADS=") == done.stdout.count("sqs-bench -m") == 5

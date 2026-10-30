@@ -56,7 +56,7 @@ class EpochResult:
 def logits_from(out: ForwardOut) -> tuple[Tensor | None, bool]:
     """``[T, B, C]`` membrane analogue used by the CE loss / membrane readout.
 
-    QLIF neurons expose a membrane. The SQS neuron does not, so the Born spiking
+    QLIF and LIF neurons expose a membrane. The SQS neuron does not, so the Born spiking
     probability ``p`` (averaged over the neuron's ``N`` channels) stands in for
     it; the second element of the tuple flags that substitution.
     """

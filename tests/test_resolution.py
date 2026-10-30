@@ -112,7 +112,7 @@ def test_batch_size_precedence(make_cfg):
 
 
 def test_every_model_resolves(make_cfg):
-    for model in ("qlif", "sqsnn", "sqsnn_uni", "sqsnn_read", "sqsnn_read_uni",
+    for model in ("lif", "qlif", "sqsnn", "sqsnn_uni", "sqsnn_read", "sqsnn_read_uni",
                   "sqsnn_angle0", "sqsnn_angle_pi4", "sqsnn_angle_pi2", "sqsnn_angle_pi"):
         cfg = resolve_cfg(make_cfg([f"model={model}", "variant=x_delay8"]))
         assert cfg.resolved.model == model

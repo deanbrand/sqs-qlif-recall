@@ -16,6 +16,7 @@ from sqs_bench.utils.rundir import run_dir_for
 
 #: model -> (n_params, n_params_stored) on the 5 -> 64 -> 4 memprobe network
 MODELS = {
+    "lif": (576, 576),
     "qlif": (1288, 1288),
     "sqsnn": (780, 780),
     "sqsnn_uni": (780, 780),

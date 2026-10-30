@@ -1,6 +1,6 @@
 # @package protocol
 # The SQS paper's training settings (lr 5e-4) with cross entropy on the output membrane
-# (QLIF) or Born probability (SQS) as the objective, which every model here can optimise.
+# (QLIF, LIF) or Born probability (SQS) as the objective, which every model here can optimise.
 name: sqs_ce
 encoder: identity         # the memory probe is already a spike train
 T: 5                      # used only when the dataset sets no T
